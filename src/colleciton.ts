@@ -13,7 +13,24 @@ class Collection {
     this.__name = name;
   }
 
-  find(query: any): Promise<any[]> {
+  private generateHandleWrite(reqId: number): (err?: Error) => void {
+    return (err?: Error) => {
+      if (!err) {
+        return;
+      }
+
+      const item = this.__state.promiseMap.get(reqId);
+      if (!item) {
+        return;
+      }
+
+      this.__state.promiseMap.delete(reqId);
+
+      item.reject(err);
+    };
+  }
+
+  public find(query?: any): Promise<any[]> {
     this.__state.initSocketIfNotExist();
     return new Promise((resolve, reject) => {
       const reqId = this.__state.reqidCounter++;
@@ -23,20 +40,7 @@ class Collection {
         reject,
       });
 
-      const handleWrite = (err?: Error) => {
-        if (!err) {
-          return;
-        }
-
-        const item = this.__state.promiseMap.get(reqId);
-        if (!item) {
-          return;
-        }
-
-        this.__state.promiseMap.delete(reqId);
-
-        item.reject(err);
-      };
+      const handleWrite = this.generateHandleWrite(reqId);
 
       this.__state.socket.write(REQUEST_HEAD, handleWrite);
 
@@ -52,6 +56,33 @@ class Collection {
       this.__state.socket.write(pack, handleWrite);
     });
 
+  }
+
+  public findOne(query: any): Promise<any> {
+    this.__state.initSocketIfNotExist();
+    return new Promise((resolve, reject) => {
+      const reqId = this.__state.reqidCounter++;
+      this.__state.promiseMap.set(reqId, {
+        reqId,
+        resolve,
+        reject,
+      });
+
+      const handleWrite = this.generateHandleWrite(reqId);
+
+      this.__state.socket.write(REQUEST_HEAD, handleWrite);
+
+      this.__state.writeUint32(reqId, handleWrite);
+      this.__state.writeInt32(MsgTy.FindOne, handleWrite)
+
+      const requestObj = {
+        cl: this.__name,
+        query,
+      };
+      const pack = encodeMsgPack(requestObj);
+
+      this.__state.socket.write(pack, handleWrite);
+    })
   }
 
 }
