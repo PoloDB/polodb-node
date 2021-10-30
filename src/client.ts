@@ -1,7 +1,7 @@
 import path from 'path';
 import net, { Socket } from 'net';
 import MsgTy from './msgTy';
-import { encode as encodeMsgPack } from '@msgpack/msgpack';
+import { encode as encodeMsgPack, decode as decodeMsgPack } from '@msgpack/msgpack';
 import { EventEmitter } from 'events';
 import child_process from 'child_process';
 
@@ -81,10 +81,12 @@ class PoloDbClient extends EventEmitter {
   }
 
   private __handleData = (buf: Buffer) => {
+    console.log('receive data: ', buf.length);
     let head = buf.subarray(0, 4);
     for (let i = 0; i < 4; i++) {
       if (head[i] !== REQUEST_HEAD[i]) {
         this.__socket.destroy(new Error('response header not match'));
+        this.__socket = undefined;
         return;
       }
     }
@@ -93,11 +95,24 @@ class PoloDbClient extends EventEmitter {
     const requestContext = this.__promiseMap.get(reqId);
     if (!requestContext) {
       this.__socket.destroy(new Error('request id not found, ' + reqId));
+      this.__socket = undefined;
       return;
     }
 
-    const respBuffer = buf.subarray(8);
-    requestContext.resolve(respBuffer);
+    const msgTy = buf.readInt32BE(8);
+    if (msgTy < 0) {  // error
+      const textDecoder = new TextDecoder();
+      const errString = textDecoder.decode(buf.subarray(12));
+      requestContext.reject(new Error(errString));
+      return;
+    }
+
+    try {
+      const obj = decodeMsgPack(buf.subarray(12));
+      requestContext.resolve(obj);
+    } catch (err) {
+      requestContext.reject(err);
+    }
   }
 
   public find(collection: string, obj?: any): Promise<any> {
@@ -153,6 +168,10 @@ class PoloDbClient extends EventEmitter {
   }
 
   public dispose() {
+    if (this.__socket) {
+      this.__socket.destroy();
+      this.__socket = null;
+    }
     this.__process.kill();
   }
 
