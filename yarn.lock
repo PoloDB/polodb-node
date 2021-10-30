@@ -487,6 +487,11 @@
     "@types/yargs" "^16.0.0"
     chalk "^4.0.0"
 
+"@msgpack/msgpack@^2.7.1":
+  version "2.7.1"
+  resolved "https://registry.nlark.com/@msgpack/msgpack/download/@msgpack/msgpack-2.7.1.tgz#f01954baadc502f3c82e9c3f72c740ce65eae1cc"
+  integrity sha1-8BlUuq3FAvPILpw/csdAzmXq4cw=
+
 "@rollup/plugin-typescript@^8.3.0":
   version "8.3.0"
   resolved "https://registry.npmmirror.com/@rollup/plugin-typescript/download/@rollup/plugin-typescript-8.3.0.tgz#bc1077fa5897b980fc27e376c4e377882c63e68b"

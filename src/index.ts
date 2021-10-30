@@ -1,3 +1,3 @@
-import PoloDbClient from "./client";
+import PoloDbClient, { Config } from "./client";
 
-export { PoloDbClient };
+export { PoloDbClient, Config };
