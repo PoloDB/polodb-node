@@ -1,6 +1,8 @@
 import path from 'path';
 import net, { Socket } from 'net';
+import MsgTy from './msgTy';
 import { encode as encodeMsgPack } from '@msgpack/msgpack';
+import { EventEmitter } from 'events';
 import child_process from 'child_process';
 
 export interface Config {
@@ -8,7 +10,7 @@ export interface Config {
 }
 
 const defaultConfig: Config = {
-  executablePath: path.join('../bin/polodb'),
+  executablePath: path.join(__dirname, '../bin/polodb'),
 };
 
 interface RequestItem {
@@ -19,9 +21,8 @@ interface RequestItem {
 
 const REQUEST_HEAD = new Uint8Array([0xFF, 0x00, 0xAA, 0xBB])
 
-class PoloDbClient {
+class PoloDbClient extends EventEmitter {
 
-  private __dbPath: string;
   private __socketPath: string;
   private __config: Config;
   private __process: child_process.ChildProcess;
@@ -30,6 +31,7 @@ class PoloDbClient {
   private __promiseMap: Map<number, RequestItem> = new Map();
 
   public constructor(dbPath: string, config?: Partial<Config>) {
+    super();
     this.__config = {
       ...defaultConfig,
       ...config,
@@ -43,14 +45,17 @@ class PoloDbClient {
       params.push(dbPath);
     }
 
-    this.__socketPath = `polodb-${Math.round(Math.random() * 0xFFFFFF)}.sock`;
+    this.__socketPath = `/tmp/polodb-${Math.round(Math.random() * 0xFFFFFF)}.sock`;
 
     params.push('--socket');
     params.push(this.__socketPath);
 
     this.__process = child_process.spawn(
       this.__config.executablePath,
-      params
+      params,
+      {
+        stdio: 'inherit'
+      }
     );
 
     this.__reqidCounter = Math.round(Math.random() * 0xFFFFFF);
@@ -65,12 +70,34 @@ class PoloDbClient {
     });
 
     this.__socket.on('error', (err: Error) => {
-      console.error(err);
+      this.emit('error', err);
     });
+
+    this.__socket.on('data', this.__handleData);
 
     this.__socket.on('close', () => {
       this.__socket = undefined;
     });
+  }
+
+  private __handleData = (buf: Buffer) => {
+    let head = buf.subarray(0, 4);
+    for (let i = 0; i < 4; i++) {
+      if (head[i] !== REQUEST_HEAD[i]) {
+        this.__socket.destroy(new Error('response header not match'));
+        return;
+      }
+    }
+
+    let reqId = buf.readUInt32BE(4);
+    const requestContext = this.__promiseMap.get(reqId);
+    if (!requestContext) {
+      this.__socket.destroy(new Error('request id not found, ' + reqId));
+      return;
+    }
+
+    const respBuffer = buf.subarray(8);
+    requestContext.resolve(respBuffer);
   }
 
   public find(collection: string, obj?: any): Promise<any> {
@@ -101,11 +128,16 @@ class PoloDbClient {
 
       this.__socket.write(REQUEST_HEAD, handleWrite);
 
-      const reqIdBuffer = new ArrayBuffer(8);
+      const reqIdBuffer = new ArrayBuffer(4);
       const reqIdView = new DataView(reqIdBuffer);
       reqIdView.setUint32(0, reqId);
 
-      this.__socket.write(new Uint8Array(reqId), handleWrite);
+      this.__socket.write(new Uint8Array(reqIdBuffer), handleWrite);
+
+      const msgTyBuffer = new ArrayBuffer(4);
+      const msgTyView = new DataView(msgTyBuffer);
+      msgTyView.setInt32(0, MsgTy.Find);
+      this.__socket.write(new Uint8Array(msgTyBuffer), handleWrite);
 
       const requestObj = {
         cl: collection,
