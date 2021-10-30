@@ -1,2 +1,0 @@
-yarn run v1.19.1
-$ jest ./tests

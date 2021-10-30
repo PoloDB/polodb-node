@@ -1,0 +1,2 @@
+
+export const REQUEST_HEAD = new Uint8Array([0xFF, 0x00, 0xAA, 0xBB]);
