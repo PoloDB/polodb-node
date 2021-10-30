@@ -1,6 +1,7 @@
 import net, { Socket } from 'net';
 import child_process from 'child_process';
 import { decode as decodeMsgPack } from '@msgpack/msgpack';
+import fs from 'fs';
 import { REQUEST_HEAD } from './common';
 
 export interface Config {
@@ -126,6 +127,7 @@ class SharedState {
       this.socket.destroy();
       this.socket = null;
     }
+    fs.unlinkSync(this.__socketPath);
   }
 
 }

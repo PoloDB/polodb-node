@@ -6,8 +6,16 @@ test('test serialize', async () => {
   const client = new PoloDbClient('/Users/duzhongchen/Workspace/polodb.js/test.db');
   await sleep(1000);
   const collection = client.collection('hello');
-  await collection.find();
-  await collection.find();
-  await collection.find();
-  client.dispose();
+  try {
+    await collection.insert({
+      _id: 0,
+      name: 'Vincent Chan',
+      gentle: 'man',
+    });
+    expect(await collection.count()).toBe(1);
+    const data = await collection.find();
+    console.log(data);
+  } finally {
+    client.dispose();
+  }
 });

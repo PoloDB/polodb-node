@@ -82,7 +82,60 @@ class Collection {
       const pack = encodeMsgPack(requestObj);
 
       this.__state.socket.write(pack, handleWrite);
-    })
+    });
+  }
+
+  public insert(data: any): Promise<any> {
+    this.__state.initSocketIfNotExist();
+    return new Promise((resolve, reject) => {
+      const reqId = this.__state.reqidCounter++;
+      this.__state.promiseMap.set(reqId, {
+        reqId,
+        resolve,
+        reject,
+      });
+
+      const handleWrite = this.generateHandleWrite(reqId);
+
+      this.__state.socket.write(REQUEST_HEAD, handleWrite);
+
+      this.__state.writeUint32(reqId, handleWrite);
+      this.__state.writeInt32(MsgTy.Insert, handleWrite)
+
+      const requestObj = {
+        cl: this.__name,
+        data,
+      };
+      const pack = encodeMsgPack(requestObj);
+
+      this.__state.socket.write(pack, handleWrite);
+    });
+  }
+
+  public count(): Promise<number> {
+    this.__state.initSocketIfNotExist();
+    return new Promise((resolve, reject) => {
+      const reqId = this.__state.reqidCounter++;
+      this.__state.promiseMap.set(reqId, {
+        reqId,
+        resolve,
+        reject,
+      });
+
+      const handleWrite = this.generateHandleWrite(reqId);
+
+      this.__state.socket.write(REQUEST_HEAD, handleWrite);
+
+      this.__state.writeUint32(reqId, handleWrite);
+      this.__state.writeInt32(MsgTy.Count, handleWrite)
+
+      const requestObj = {
+        cl: this.__name,
+      };
+      const pack = encodeMsgPack(requestObj);
+
+      this.__state.socket.write(pack, handleWrite);
+    });
   }
 
 }
