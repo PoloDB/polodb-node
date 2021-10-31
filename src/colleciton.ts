@@ -31,7 +31,6 @@ class Collection {
   }
 
   public find(query?: any): Promise<any[]> {
-    this.__state.initSocketIfNotExist();
     return new Promise((resolve, reject) => {
       const reqId = this.__state.reqidCounter++;
       this.__state.promiseMap.set(reqId, {
@@ -39,6 +38,8 @@ class Collection {
         resolve,
         reject,
       });
+
+      this.__state.initSocketIfNotExist();
 
       const handleWrite = this.generateHandleWrite(reqId);
 
@@ -60,7 +61,6 @@ class Collection {
   }
 
   public findOne(query: any): Promise<any> {
-    this.__state.initSocketIfNotExist();
     return new Promise((resolve, reject) => {
       const reqId = this.__state.reqidCounter++;
       this.__state.promiseMap.set(reqId, {
@@ -68,6 +68,8 @@ class Collection {
         resolve,
         reject,
       });
+
+      this.__state.initSocketIfNotExist();
 
       const handleWrite = this.generateHandleWrite(reqId);
 
@@ -88,7 +90,6 @@ class Collection {
   }
 
   public insert(data: any): Promise<any> {
-    this.__state.initSocketIfNotExist();
     return new Promise((resolve, reject) => {
       const reqId = this.__state.reqidCounter++;
       this.__state.promiseMap.set(reqId, {
@@ -96,6 +97,8 @@ class Collection {
         resolve,
         reject,
       });
+
+      this.__state.initSocketIfNotExist();
 
       const handleWrite = this.generateHandleWrite(reqId);
 
@@ -116,7 +119,6 @@ class Collection {
   }
 
   public count(): Promise<number> {
-    this.__state.initSocketIfNotExist();
     return new Promise((resolve, reject) => {
       const reqId = this.__state.reqidCounter++;
       this.__state.promiseMap.set(reqId, {
@@ -124,6 +126,8 @@ class Collection {
         resolve,
         reject,
       });
+
+      this.__state.initSocketIfNotExist();
 
       const handleWrite = this.generateHandleWrite(reqId);
 

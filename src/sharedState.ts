@@ -1,8 +1,9 @@
 import net, { Socket } from 'net';
 import child_process from 'child_process';
 import { decode as decodeMsgPack } from '@msgpack/msgpack';
-import fs from 'fs';
-import { REQUEST_HEAD } from './common';
+import { REQUEST_HEAD, PING_HEAD } from './common';
+
+const sleep = (time) => new Promise((resolve) => setTimeout(resolve, time));
 
 export interface Config {
   executablePath: string;
@@ -54,6 +55,19 @@ class SharedState {
     this.reqidCounter = Math.round(Math.random() * 0xFFFFFF);
   }
 
+  public async start(): Promise<void> {
+    const sleepTimes = [5, 7, 9, 11];
+    for (let i = 0; i < 100; i++) {
+      try {
+        await this.ping();
+        return;
+      } catch (err) {
+        await sleep(sleepTimes[i % sleepTimes.length]);
+      }
+    }
+    throw new Error('can not connect to the database');
+  }
+
   private appendData(buf: Buffer) {
     const totalSize = this.__buffer.length + buf.length;
     const newBuffer = Buffer.alloc(totalSize);
@@ -71,13 +85,40 @@ class SharedState {
       return;
     }
 
+    function bytesEqual(b1: Uint8Array, b2: Uint8Array): boolean {
+      if (b1.length !== b2.length) {
+        return false;
+      }
+
+      for (let i = 0; i < b1.length; i++) {
+        if (b1[i] !== b2[i]) {
+          return false;
+        }
+      }
+
+      return true;
+    }
+
     let head = buf.subarray(0, 4);
-    for (let i = 0; i < 4; i++) {
-      if (head[i] !== REQUEST_HEAD[i]) {
-        this.socket.destroy(new Error('response header not match'));
-        this.socket = undefined;
+    if (!bytesEqual(head, REQUEST_HEAD)) {
+      if (bytesEqual(head, PING_HEAD)) {
+        if (buf.length < 8) {  // bytes not enough
+          return;
+        }
+        let reqId = buf.readUInt32BE(4);
+        this.__buffer = buf.subarray(8);
+
+        const ctx = this.promiseMap.get(reqId);
+        if (!ctx) {
+          return;
+        }
+
+        ctx.resolve(undefined);
         return;
       }
+      this.socket.destroy(new Error('response header not match'));
+      this.socket = undefined;
+      return;
     }
 
     let reqId = buf.readUInt32BE(4);
@@ -141,20 +182,50 @@ class SharedState {
     this.tryParseBuffer();
   }
 
-  public initSocketIfNotExist() {
+  public initSocketIfNotExist(spare?: Socket) {
     if (this.socket) {
       return;
     }
-    this.socket = net.createConnection({
-      path: this.__socketPath,
-    });
+    if (spare) {
+      this.socket = spare;
+    } else {
+      this.socket = net.createConnection({
+        path: this.__socketPath,
+      });
+    }
 
-    this.socket.on('error', this.errorHandler);
+    this.socket.on('error', (err: Error) => {
+      this.rejectAllPromises(err);
+      this.errorHandler(err);
+      this.socket = undefined;
+    });
 
     this.socket.on('data', this.__handleData);
 
     this.socket.on('close', () => {
       this.socket = undefined;
+    });
+  }
+
+  private rejectAllPromises(err: Error) {
+    for (const [, value] of this.promiseMap) {
+      value.reject(err);
+    }
+    this.promiseMap.clear();
+  }
+
+  public ping(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const socket = new Socket();
+      const handleError = (err: Error) => {
+        reject(err);
+      };
+      socket.connect(this.__socketPath, () => {
+        socket.removeListener('error', handleError);
+        this.initSocketIfNotExist(socket);
+        resolve();
+      });
+      socket.on('error', handleError);
     });
   }
 
