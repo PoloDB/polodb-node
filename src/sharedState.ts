@@ -85,16 +85,13 @@ class SharedState {
     if (!requestContext) {
       this.socket.destroy(new Error('request id not found, ' + reqId));
       this.socket = undefined;
+      this.__buffer = Buffer.alloc(0);
       return;
     }
 
     const msgTy = buf.readInt32BE(8);
     if (msgTy < 0) {  // error
-      const errorMsgSize = buf.readUInt32BE(12);
-      const errorMsgBuffer = buf.subarray(16, 16 + errorMsgSize);
-      const textDecoder = new TextDecoder();
-      const errString = textDecoder.decode(errorMsgBuffer);
-      requestContext.reject(new Error(errString));
+      this.tryParseErrorMessage(requestContext);
       return;
     }
 
@@ -107,7 +104,6 @@ class SharedState {
 
     const endSize = HEADER_SIZE + bodySize;
     if (buf.length < endSize) {  // body not enough
-      console.log('try parse data 2, buffer len: ' + buf.length + ' end: ' + endSize);
       return;
     }
 
@@ -115,12 +111,29 @@ class SharedState {
     try {
       const obj = decodeMsgPack(body);
       requestContext.resolve(obj);
-      this.__buffer = body.subarray(endSize);
+      this.__buffer = buf.subarray(endSize);
     } catch (err) {
       requestContext.reject(err);
       this.socket.destroy();
       this.socket = null;
     }
+  }
+
+  private tryParseErrorMessage(ctx: RequestItem) {
+    const buf = this.__buffer;
+
+    const errorMsgSize = buf.readUInt32BE(12);
+
+    const endSize = HEADER_SIZE + errorMsgSize;
+    if (buf.length < endSize) {  // body not enough
+      return;
+    }
+
+    const errorMsgBuffer = buf.subarray(HEADER_SIZE, HEADER_SIZE + errorMsgSize);
+    const textDecoder = new TextDecoder();
+    const errString = textDecoder.decode(errorMsgBuffer);
+    ctx.reject(new Error(errString));
+    this.__buffer = buf.subarray(endSize);
   }
 
   private __handleData = (buf: Buffer) => {
