@@ -1,7 +1,6 @@
-import { encode as encodeMsgPack } from '@msgpack/msgpack';
+import { encode } from './encoding';
 import MsgTy from './msgTy';
 import SharedState from './sharedState';
-import { REQUEST_HEAD } from './common';
 
 class Collection {
 
@@ -13,137 +12,58 @@ class Collection {
     this.__name = name;
   }
 
-  private generateHandleWrite(reqId: number): (err?: Error) => void {
-    return (err?: Error) => {
-      if (!err) {
-        return;
-      }
-
-      const item = this.__state.promiseMap.get(reqId);
-      if (!item) {
-        return;
-      }
-
-      this.__state.promiseMap.delete(reqId);
-
-      item.reject(err);
-    };
-  }
-
   public find(query?: any): Promise<any[]> {
-    return new Promise((resolve, reject) => {
-      const reqId = this.__state.reqidCounter++;
-      this.__state.promiseMap.set(reqId, {
-        reqId,
-        resolve,
-        reject,
-      });
-
-      this.__state.initSocketIfNotExist();
-
-      const handleWrite = this.generateHandleWrite(reqId);
-
-      this.__state.socket.write(REQUEST_HEAD, handleWrite);
-
-      this.__state.writeUint32(reqId, handleWrite);
-      this.__state.writeInt32(MsgTy.Find, handleWrite)
-
-      const requestObj = {
-        cl: this.__name,
-        query,
-      };
-      const pack = encodeMsgPack(requestObj);
-
-      this.__state.writeUint32(pack.byteLength, handleWrite);
-      this.__state.socket.write(pack, handleWrite);
-    });
-
+    const requestObj = {
+      cl: this.__name,
+      query,
+    };
+    const pack = encode(requestObj);
+    return this.__state.sendRequest(MsgTy.Find, pack);
   }
 
   public findOne(query: any): Promise<any> {
-    return new Promise((resolve, reject) => {
-      const reqId = this.__state.reqidCounter++;
-      this.__state.promiseMap.set(reqId, {
-        reqId,
-        resolve,
-        reject,
-      });
-
-      this.__state.initSocketIfNotExist();
-
-      const handleWrite = this.generateHandleWrite(reqId);
-
-      this.__state.socket.write(REQUEST_HEAD, handleWrite);
-
-      this.__state.writeUint32(reqId, handleWrite);
-      this.__state.writeInt32(MsgTy.FindOne, handleWrite)
-
-      const requestObj = {
-        cl: this.__name,
-        query,
-      };
-      const pack = encodeMsgPack(requestObj);
-
-      this.__state.writeUint32(pack.byteLength, handleWrite);
-      this.__state.socket.write(pack, handleWrite);
-    });
+    const requestObj = {
+      cl: this.__name,
+      query,
+    };
+    const pack = encode(requestObj);
+    return this.__state.sendRequest(MsgTy.FindOne, pack);
   }
 
   public insert(data: any): Promise<any> {
-    return new Promise((resolve, reject) => {
-      const reqId = this.__state.reqidCounter++;
-      this.__state.promiseMap.set(reqId, {
-        reqId,
-        resolve,
-        reject,
-      });
+    const requestObj = {
+      cl: this.__name,
+      data,
+    };
+    const pack = encode(requestObj);
+    return this.__state.sendRequest(MsgTy.Insert, pack);
+  }
 
-      this.__state.initSocketIfNotExist();
+  public update(query: any, update: any): Promise<number> {
+    const request = {
+      cl: this.__name,
+      query,
+      update
+    };
+    const pack = encode(request);
+    return this.__state.sendRequest(MsgTy.Update, pack);
+  }
 
-      const handleWrite = this.generateHandleWrite(reqId);
-
-      this.__state.socket.write(REQUEST_HEAD, handleWrite);
-
-      this.__state.writeUint32(reqId, handleWrite);
-      this.__state.writeInt32(MsgTy.Insert, handleWrite)
-
-      const requestObj = {
-        cl: this.__name,
-        data,
-      };
-      const pack = encodeMsgPack(requestObj);
-
-      this.__state.writeUint32(pack.byteLength, handleWrite);
-      this.__state.socket.write(pack, handleWrite);
-    });
+  public delete(query: any): Promise<any> {
+    const requestObj = {
+      cl: this.__name,
+      query,
+    };
+    const pack = encode(requestObj);
+    return this.__state.sendRequest(MsgTy.Delete, pack);
   }
 
   public count(): Promise<number> {
-    return new Promise((resolve, reject) => {
-      const reqId = this.__state.reqidCounter++;
-      this.__state.promiseMap.set(reqId, {
-        reqId,
-        resolve,
-        reject,
-      });
-
-      this.__state.initSocketIfNotExist();
-
-      const handleWrite = this.generateHandleWrite(reqId);
-
-      this.__state.socket.write(REQUEST_HEAD, handleWrite);
-
-      this.__state.writeUint32(reqId, handleWrite);
-      this.__state.writeInt32(MsgTy.Count, handleWrite)
-
-      const requestObj = {
-        cl: this.__name,
-      };
-      const pack = encodeMsgPack(requestObj);
-
-      this.__state.writeUint32(pack.byteLength, handleWrite);
-      this.__state.socket.write(pack, handleWrite);
-    });
+    const requestObj = {
+      cl: this.__name,
+    };
+    const pack = encode(requestObj);
+    return this.__state.sendRequest(MsgTy.Count, pack);
   }
 
 }

@@ -1,13 +1,15 @@
 import path from 'path';
 import { EventEmitter } from 'events';
-import { REQUEST_HEAD } from './common';
-import MsgTy from './msgTy';
 import SharedState, { Config } from './sharedState';
 import Collection from './colleciton';
 import child_process from 'child_process';
+import { TransactionType } from './transactionType';
+import MsgTy from './msgTy';
+import { encode } from './encoding';
 
 const defaultConfig: Config = {
   executablePath: path.join(__dirname, '../bin/polodb'),
+  log: false,
 };
 
 class PoloDbClient extends EventEmitter {
@@ -78,6 +80,31 @@ class PoloDbClient extends EventEmitter {
     });
   }
 
+  public startTransaction(ty?: TransactionType): Promise<void> {
+    if (typeof ty === 'undefined') {
+      ty = TransactionType.Auto;
+    }
+    const pack = encode(ty);
+    return this.__state.sendRequest(MsgTy.StartTransaction, pack);
+  }
+
+  public dropCollection(name: string): Promise<void> {
+    const pack = encode(name);
+    return this.__state.sendRequest(MsgTy.Drop, pack);
+  }
+
+  public commit(): Promise<void> {
+    return this.writeEmptyBodyWithType(MsgTy.Commit);
+  }
+
+  public rollback(): Promise<void> {
+    return this.writeEmptyBodyWithType(MsgTy.Rollback);
+  }
+
+  private writeEmptyBodyWithType(ty: MsgTy): Promise<void> {
+    return this.__state.sendRequest(ty);
+  }
+
   private start(): Promise<void> {
     return this.__state.start();
   }
@@ -86,26 +113,15 @@ class PoloDbClient extends EventEmitter {
     return new Collection(this.__state, name);
   }
 
-  public dispose() {
-    this.__shuttingDown = true;
-    this.sendSafelyQuitMessageAsync().finally(() => {
-      this.__state.dispose();
-    });
+  public async createCollection(name: string): Promise<Collection> {
+    const pack = encode({ name });
+    await this.__state.sendRequest(MsgTy.CreateCollection, pack);
+    return this.collection(name);
   }
 
-  private sendSafelyQuitMessageAsync(): Promise<any> {
-    return new Promise((resolve, reject) => {
-      const reqId = this.__state.reqidCounter++;
-      this.__state.promiseMap.set(reqId, {
-        reqId,
-        resolve,
-        reject,
-      });
-      this.__state.socket.write(REQUEST_HEAD);
-
-      this.__state.writeUint32(reqId);
-      this.__state.writeInt32(MsgTy.SafelyQuit);
-    });
+  public dispose() {
+    this.__shuttingDown = true;
+    this.__state.dispose();
   }
 
   get config(): Config {

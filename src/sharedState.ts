@@ -1,12 +1,14 @@
 import net, { Socket } from 'net';
 import child_process from 'child_process';
-import { decode as decodeMsgPack } from '@msgpack/msgpack';
+import { decode } from './encoding';
 import { REQUEST_HEAD, PING_HEAD } from './common';
+import MsgTy from './msgTy';
 
 const sleep = (time) => new Promise((resolve) => setTimeout(resolve, time));
 
 export interface Config {
   executablePath: string;
+  log: boolean;
 }
 
 export interface RequestItem {
@@ -24,6 +26,7 @@ class SharedState {
   public reqidCounter: number;
   private __process: child_process.ChildProcess;
   private __buffer: Buffer = Buffer.from("");
+  private __programExit: boolean = false;
   public promiseMap: Map<number, RequestItem> = new Map();
 
   constructor(
@@ -39,6 +42,10 @@ class SharedState {
       params.push(dbPath);
     }
 
+    if (config.log) {
+      params.push('--log');
+    }
+
     this.__socketPath = `/tmp/polodb-${Math.round(Math.random() * 0xFFFFFF)}.sock`;
 
     params.push('--socket');
@@ -52,12 +59,19 @@ class SharedState {
       }
     );
 
+    this.__process.on('exit', () => {
+      this.__programExit = true;
+    });
+
     this.reqidCounter = Math.round(Math.random() * 0xFFFFFF);
   }
 
   public async start(): Promise<void> {
     const sleepTimes = [5, 7, 9, 11];
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 320; i++) {
+      if (this.__programExit) {
+        break;
+      }
       try {
         await this.ping();
         return;
@@ -114,7 +128,7 @@ class SharedState {
         }
 
         ctx.resolve(undefined);
-        return;
+        return this.tryParseBuffer();
       }
       this.socket.destroy(new Error('response header not match'));
       this.socket = undefined;
@@ -150,7 +164,7 @@ class SharedState {
 
     const body = buf.subarray(HEADER_SIZE, endSize);
     try {
-      const obj = decodeMsgPack(body);
+      const obj = decode(body);
       requestContext.resolve(obj);
       this.__buffer = buf.subarray(endSize);
     } catch (err) {
@@ -158,6 +172,7 @@ class SharedState {
       this.socket.destroy();
       this.socket = null;
     }
+    this.tryParseBuffer();
   }
 
   private tryParseErrorMessage(ctx: RequestItem) {
@@ -175,6 +190,7 @@ class SharedState {
     const errString = textDecoder.decode(errorMsgBuffer);
     ctx.reject(new Error(errString));
     this.__buffer = buf.subarray(endSize);
+    this.tryParseBuffer();
   }
 
   private __handleData = (buf: Buffer) => {
@@ -245,11 +261,60 @@ class SharedState {
     return this.socket.write(new Uint8Array(buffer), cb);
   }
 
+  public writeBody(buf: Uint8Array, cb?: (err: Error) => void): boolean {
+    this.writeUint32(buf.byteLength, cb);
+    return this.socket.write(buf, cb);
+  }
+
+  private generateHandleWrite(reqId: number): (err?: Error) => void {
+    return (err?: Error) => {
+      if (!err) {
+        return;
+      }
+
+      const item = this.promiseMap.get(reqId);
+      if (!item) {
+        return;
+      }
+
+      this.promiseMap.delete(reqId);
+
+      item.reject(err);
+    };
+  }
+
+  public sendRequest(msgTy: MsgTy, body?: Uint8Array): Promise<any> {
+    return new Promise((resolve, reject) => {
+      const reqId = this.reqidCounter++;
+      this.promiseMap.set(reqId, {
+        reqId,
+        resolve,
+        reject,
+      });
+
+      this.initSocketIfNotExist();
+
+      const handleWrite = this.generateHandleWrite(reqId);
+
+      this.socket.write(REQUEST_HEAD, handleWrite);
+
+      this.writeUint32(reqId, handleWrite);
+      this.writeInt32(msgTy, handleWrite);
+
+      if (body) {
+        this.writeBody(body, handleWrite);
+      } else {
+        this.writeUint32(0);
+      }
+    });
+  }
+
   public kill() {
     this.__process.kill();
   }
 
   public dispose() {
+    this.kill();
     if (this.socket) {
       this.socket.destroy();
       this.socket = null;
