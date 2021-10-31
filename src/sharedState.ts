@@ -14,12 +14,15 @@ export interface RequestItem {
   reject: (err: Error) => void,
 }
 
+const HEADER_SIZE = 16;
+
 class SharedState {
 
   private __socketPath: string;
   public socket?: Socket;
   public reqidCounter: number;
   private __process: child_process.ChildProcess;
+  private __buffer: Buffer = Buffer.from("");
   public promiseMap: Map<number, RequestItem> = new Map();
 
   constructor(
@@ -51,7 +54,23 @@ class SharedState {
     this.reqidCounter = Math.round(Math.random() * 0xFFFFFF);
   }
 
-  private __handleData = (buf: Buffer) => {
+  private appendData(buf: Buffer) {
+    const totalSize = this.__buffer.length + buf.length;
+    const newBuffer = Buffer.alloc(totalSize);
+
+    this.__buffer.copy(newBuffer, 0);
+    buf.copy(newBuffer, this.__buffer.length);
+
+    this.__buffer = newBuffer;
+  }
+
+  private tryParseBuffer() {
+    const buf = this.__buffer;
+
+    if (buf.length < HEADER_SIZE) {
+      return;
+    }
+
     let head = buf.subarray(0, 4);
     for (let i = 0; i < 4; i++) {
       if (head[i] !== REQUEST_HEAD[i]) {
@@ -71,18 +90,42 @@ class SharedState {
 
     const msgTy = buf.readInt32BE(8);
     if (msgTy < 0) {  // error
+      const errorMsgSize = buf.readUInt32BE(12);
+      const errorMsgBuffer = buf.subarray(16, 16 + errorMsgSize);
       const textDecoder = new TextDecoder();
-      const errString = textDecoder.decode(buf.subarray(12));
+      const errString = textDecoder.decode(errorMsgBuffer);
       requestContext.reject(new Error(errString));
       return;
     }
 
+    const bodySize = buf.readUInt32BE(12);
+    if (bodySize === 0) {
+      requestContext.resolve(undefined);
+      this.__buffer = buf.subarray(HEADER_SIZE);
+      return 0;
+    }
+
+    const endSize = HEADER_SIZE + bodySize;
+    if (buf.length < endSize) {  // body not enough
+      console.log('try parse data 2, buffer len: ' + buf.length + ' end: ' + endSize);
+      return;
+    }
+
+    const body = buf.subarray(HEADER_SIZE, endSize);
     try {
-      const obj = decodeMsgPack(buf.subarray(12));
+      const obj = decodeMsgPack(body);
       requestContext.resolve(obj);
+      this.__buffer = body.subarray(endSize);
     } catch (err) {
       requestContext.reject(err);
+      this.socket.destroy();
+      this.socket = null;
     }
+  }
+
+  private __handleData = (buf: Buffer) => {
+    this.appendData(buf);
+    this.tryParseBuffer();
   }
 
   public initSocketIfNotExist() {
@@ -127,7 +170,6 @@ class SharedState {
       this.socket.destroy();
       this.socket = null;
     }
-    fs.unlinkSync(this.__socketPath);
   }
 
 }

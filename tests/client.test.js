@@ -16,6 +16,7 @@ test('test serialize', async () => {
     const data = await collection.find();
     console.log(data);
   } finally {
+    console.log('dispose');
     client.dispose();
   }
 });

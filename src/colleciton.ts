@@ -53,6 +53,7 @@ class Collection {
       };
       const pack = encodeMsgPack(requestObj);
 
+      this.__state.writeUint32(pack.byteLength, handleWrite);
       this.__state.socket.write(pack, handleWrite);
     });
 
@@ -81,6 +82,7 @@ class Collection {
       };
       const pack = encodeMsgPack(requestObj);
 
+      this.__state.writeUint32(pack.byteLength, handleWrite);
       this.__state.socket.write(pack, handleWrite);
     });
   }
@@ -108,6 +110,7 @@ class Collection {
       };
       const pack = encodeMsgPack(requestObj);
 
+      this.__state.writeUint32(pack.byteLength, handleWrite);
       this.__state.socket.write(pack, handleWrite);
     });
   }
@@ -134,6 +137,7 @@ class Collection {
       };
       const pack = encodeMsgPack(requestObj);
 
+      this.__state.writeUint32(pack.byteLength, handleWrite);
       this.__state.socket.write(pack, handleWrite);
     });
   }

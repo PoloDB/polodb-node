@@ -36,16 +36,24 @@ class PoloDbClient extends EventEmitter {
 
   public dispose() {
     this.__shuttingDown = true;
-    this.sendSafelyQuitMessage();
-    this.__state.dispose();
+    this.sendSafelyQuitMessageAsync().finally(() => {
+      this.__state.dispose();
+    });
   }
 
-  private sendSafelyQuitMessage() {
-    this.__state.socket.write(REQUEST_HEAD);
+  private sendSafelyQuitMessageAsync(): Promise<any> {
+    return new Promise((resolve, reject) => {
+      const reqId = this.__state.reqidCounter++;
+      this.__state.promiseMap.set(reqId, {
+        reqId,
+        resolve,
+        reject,
+      });
+      this.__state.socket.write(REQUEST_HEAD);
 
-    const reqId = this.__state.reqidCounter++;
-    this.__state.writeUint32(reqId);
-    this.__state.writeInt32(MsgTy.SafelyQuit);
+      this.__state.writeUint32(reqId);
+      this.__state.writeInt32(MsgTy.SafelyQuit);
+    });
   }
 
   get config(): Config {
