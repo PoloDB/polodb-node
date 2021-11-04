@@ -1,12 +1,17 @@
 {
   "name": "polodb",
   "version": "2.0.0",
-  "description": "PoloDB is an embedded JSON-based database.",
+  "description": "PoloDB is a lightweight JSON-based database.",
   "main": "index.js",
   "engines": {
     "node": ">= 0.12"
   },
+  "keywords": ["database", "json", "lightweight", "node", "mongodb"],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vincentdchan/polodb.js"
+  },
   "scripts": {
     "build": "rollup -c rollup.config.js",
     "test": "jest ./tests --useStderr"
