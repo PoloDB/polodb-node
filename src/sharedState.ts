@@ -2,6 +2,7 @@ import net, { Socket } from 'net';
 import child_process from 'child_process';
 import { decode } from './encoding';
 import { REQUEST_HEAD, PING_HEAD } from './common';
+import os from 'os';
 import MsgTy from './msgTy';
 
 const sleep = (time) => new Promise((resolve) => setTimeout(resolve, time));
@@ -46,7 +47,11 @@ class SharedState {
       params.push('--log');
     }
 
-    this.__socketPath = `/tmp/polodb-${Math.round(Math.random() * 0xFFFFFF)}.sock`;
+    if (os.platform() === 'win32') {
+      this.__socketPath = `\\\\.\\pipe\\polodb-ipc-${Math.round(Math.random() * 0xFFFFFF)}`;
+    } else {
+      this.__socketPath = `/tmp/polodb-${Math.round(Math.random() * 0xFFFFFF)}.sock`;
+    }
 
     params.push('--socket');
     params.push(this.__socketPath);
@@ -292,8 +297,6 @@ class SharedState {
         reject,
       });
 
-      this.initSocketIfNotExist();
-
       const handleWrite = this.generateHandleWrite(reqId);
 
       this.socket.write(REQUEST_HEAD, handleWrite);
@@ -310,7 +313,7 @@ class SharedState {
   }
 
   public kill() {
-    this.__process.kill();
+    this.socket.destroy();
   }
 
   public dispose() {

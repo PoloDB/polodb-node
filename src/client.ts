@@ -4,11 +4,12 @@ import SharedState, { Config } from './sharedState';
 import Collection from './colleciton';
 import child_process from 'child_process';
 import { TransactionType } from './transactionType';
+import os from 'os';
 import MsgTy from './msgTy';
 import { encode } from './encoding';
 
 const defaultConfig: Config = {
-  executablePath: path.join(__dirname, '../bin/polodb'),
+  executablePath: os.platform() === 'win32' ? path.join(__dirname, '../bin/polodb.exe') : path.join(__dirname, '../bin/polodb'),
   log: false,
 };
 
