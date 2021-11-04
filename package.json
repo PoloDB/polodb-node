@@ -1,6 +1,6 @@
 {
   "name": "polodb",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "PoloDB is a lightweight JSON-based database.",
   "main": "index.js",
   "engines": {
