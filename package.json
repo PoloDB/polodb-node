@@ -12,7 +12,11 @@
     "type": "git",
     "url": "https://github.com/vincentdchan/polodb.js"
   },
+  "bin": {
+    "polodb": "./bin/polodb"
+  },
   "scripts": {
+    "install": "node scripts/download-lib.js",
     "build": "rollup -c rollup.config.js",
     "test": "jest ./tests --useStderr"
   },
