@@ -6,11 +6,17 @@
   "engines": {
     "node": ">= 0.12"
   },
-  "keywords": ["database", "json", "lightweight", "node", "mongodb"],
+  "keywords": [
+    "database",
+    "json",
+    "lightweight",
+    "node",
+    "mongodb"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/vincentdchan/polodb.js"
+    "url": "https://github.com/PoloDB/polodb-node"
   },
   "bin": {
     "polodb": "./bin/polodb"
@@ -23,6 +29,7 @@
   "devDependencies": {
     "@rollup/plugin-typescript": "^8.3.0",
     "jest": "^27.3.1",
+    "node-fetch-commonjs": "^3.2.4",
     "rollup": "^2.58.3",
     "tslib": "^2.3.1",
     "typescript": "^4.4.4"
