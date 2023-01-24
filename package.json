@@ -24,11 +24,13 @@
   "scripts": {
     "install": "node scripts/download-lib.js",
     "build": "rollup -c rollup.config.js",
+    "buildLib": "cmake-js compile",
     "test": "jest ./tests --useStderr"
   },
   "devDependencies": {
     "@rollup/plugin-typescript": "^8.3.0",
     "cli-progress": "^3.11.2",
+    "cmake-js": "^7.1.1",
     "follow-redirects": "^1.15.2",
     "jest": "^27.3.1",
     "node-fetch-commonjs": "^3.2.4",
@@ -37,6 +39,6 @@
     "typescript": "^4.4.4"
   },
   "dependencies": {
-    "@msgpack/msgpack": "^2.7.1"
+    "bson": "^4.7.2"
   }
 }

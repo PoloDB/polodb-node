@@ -3,6 +3,7 @@
 /dist
 /bin
 /lib
+/build
 
 *.log
 *.db
