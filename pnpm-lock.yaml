@@ -3,6 +3,8 @@ lockfileVersion: 5.4
 specifiers:
   '@msgpack/msgpack': ^2.7.1
   '@rollup/plugin-typescript': ^8.3.0
+  cli-progress: ^3.11.2
+  follow-redirects: ^1.15.2
   jest: ^27.3.1
   node-fetch-commonjs: ^3.2.4
   rollup: ^2.58.3
@@ -14,6 +16,8 @@ dependencies:
 
 devDependencies:
   '@rollup/plugin-typescript': 8.5.0_sbiskyiysxhldmns7rmnvoiszu
+  cli-progress: 3.11.2
+  follow-redirects: 1.15.2
   jest: 27.5.1
   node-fetch-commonjs: 3.2.4
   rollup: 2.79.1
@@ -978,6 +982,13 @@ packages:
     resolution: {integrity: sha512-cOU9usZw8/dXIXKtwa8pM0OTJQuJkxMN6w30csNRUerHfeQ5R6U3kkU/FtJeIf3M202OHfY2U8ccInBG7/xogA==}
     dev: true
 
+  /cli-progress/3.11.2:
+    resolution: {integrity: sha512-lCPoS6ncgX4+rJu5bS3F/iCz17kZ9MPZ6dpuTtI0KXKABkhyXIdYB3Inby1OpaGti3YlI3EeEkM9AuWpelJrVA==}
+    engines: {node: '>=4'}
+    dependencies:
+      string-width: 4.2.3
+    dev: true
+
   /cliui/7.0.4:
     resolution: {integrity: sha512-OcRE68cOsVMXp1Yvonl/fzkQOyjLSu/8bhPDfQt0e0/Eb283TKP20Fs2MqoPsr9SwA595rRCA+QMzYc9nBP+JQ==}
     dependencies:
@@ -1247,6 +1258,16 @@ packages:
     dependencies:
       locate-path: 5.0.0
       path-exists: 4.0.0
+    dev: true
+
+  /follow-redirects/1.15.2:
+    resolution: {integrity: sha512-VQLG33o04KaQ8uYi2tVNbdrWp1QWxNNea+nmIB4EVM28v0hmP17z7aG1+wAkNzVq4KeXTq3221ye5qTJP91JwA==}
+    engines: {node: '>=4.0'}
+    peerDependencies:
+      debug: '*'
+    peerDependenciesMeta:
+      debug:
+        optional: true
     dev: true
 
   /form-data/3.0.1:
