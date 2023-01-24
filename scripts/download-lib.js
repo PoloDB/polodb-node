@@ -89,13 +89,48 @@ const fetch = require('node-fetch-commonjs');
 //   return checksumContent === actualChecksum;
 // }
 
+const assetsMap = {
+  "darwin-arm64": [
+    "libpolodb_clib-darwin-arm64.a"
+  ],
+  "darwin-x64": [
+    "libpolodb_clib-darwin-x64.a",
+  ],
+  "linux-x64": [
+    "libpolodb_clib-linux-x64.a",
+  ],
+  "win32-x64": [
+    "polodb_clib-win32-x64.lib"
+  ],
+}
+
+function findAssets(assets) {
+  const platformStr = `${process.platform}-${process.arch}`;
+  const assetsArr = assetsMap[platformStr];
+  if (!assetsArr) {
+    return undefined;
+  }
+  const result = [];
+
+  for (const asset of assets) {
+    for (target of assetsArr) {
+      if (asset.name === target) {
+        result.push(asset);
+      }
+    }
+  }
+
+  return result;
+}
+
 async function main() {
   try {
     const resp = await fetch("https://api.github.com/repos/PoloDB/PoloDB/releases/latest");
     const data = await resp.json();
     const { tag_name, assets } = data;
+    const downloadAssets = findAssets(assets);
     console.log("tag name:", tag_name);
-    // console.log("assets:", assets);
+    console.log("assets:", downloadAssets);
   } catch (err) {
     console.error(err);
     process.exit(-1);
