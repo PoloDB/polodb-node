@@ -139,6 +139,27 @@ clean:
   return result;
 }
 
+typedef struct {
+  napi_env env;
+  napi_deferred deferred;
+} MessageData ;
+
+void polodb_async_message_handler(PLDBError* err, const unsigned char* result_data, uint64_t result_size, void* data) {
+  MessageData* raw_data = (MessageData*)data;
+  if (err != NULL) {
+    napi_reject_deferred(raw_data->env, raw_data->deferred, NULL);
+
+    PLDB_free_error(err);
+    free(raw_data);
+    return;
+  }
+
+  napi_resolve_deferred(raw_data->env, raw_data->deferred, NULL);
+
+  PLDB_free_result(result_data);
+  free(raw_data);
+}
+
 static napi_value
 polodb_handle_message_async(napi_env env, napi_callback_info info) {
   size_t argc = 1;
@@ -150,7 +171,6 @@ polodb_handle_message_async(napi_env env, napi_callback_info info) {
   }
 
   Database* db = NULL;
-  PLDBError* db_err = NULL;
   st = napi_get_value_external(env, thisArg, (void**)&db);
   if (st != napi_ok) {
     return NULL;
@@ -170,35 +190,26 @@ polodb_handle_message_async(napi_env env, napi_callback_info info) {
     goto clean;
   }
 
-  unsigned char* result_data = NULL;
-  uint64_t result_size;
-  napi_value result = NULL;
-  db_err = PLDB_handle_message(db, (unsigned char*)data, data_len, &result_data, &result_size);
-
-  if (db_err != NULL) {
-    napi_throw_error(env, NULL, db_err->message);
-    // TODO: throw error
-    goto clean;
-  }
-
-  st = napi_create_buffer_copy(env, result_size, result_data, NULL, &result);
+  napi_value promise = NULL;
+  napi_deferred deferred = NULL;
+  st = napi_create_promise(env, &deferred, &promise);
   if (st != napi_ok) {
     goto clean;
   }
+
+  MessageData* raw_data = (MessageData*)malloc(sizeof(MessageData));
+  raw_data->env = env;
+  raw_data->deferred = deferred;
+
+  PLDB_handle_message_async(db, (unsigned char*)data, data_len, polodb_async_message_handler, raw_data);
 
 clean:
   if (data != NULL) {
     free(data);
     data = NULL;
   }
-  if (db_err != NULL) {
-    PLDB_free_error(db_err);
-  }
-  if (result_data != NULL) {
-    PLDB_free_result(result_data);
-  }
 
-  return result;
+  return promise;
 }
 
 #define DECLARE_NAPI_METHOD(name, func)                          \
