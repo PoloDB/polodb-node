@@ -44,6 +44,12 @@ PLDBError* PLDB_open(const char* path, Database** result);
 PLDBError* PLDB_handle_message(Database* db, const unsigned char *msg, uint64_t msg_size,
   unsigned char** result, uint64_t* result_size);
 
+typedef void (*async_message_handler)(PLDBError* err, const unsigned char* msg, uint64_t msg_size, void* data);
+
+void PLDB_handle_message_async(Database* db, const unsigned char *msg, uint64_t msg_size,
+  async_message_handler callback, void* raw
+);
+
 void PLDB_free_result(unsigned char* result);
 
 int PLDB_version(char* buffer, unsigned int buffer_size);

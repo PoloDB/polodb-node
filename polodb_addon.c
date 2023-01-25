@@ -139,9 +139,97 @@ clean:
   return result;
 }
 
+
+static napi_value
+polodb_ctor(napi_env env, napi_callback_info info) {
+  size_t argc = 1;
+  napi_value argv[1];
+  napi_status st = napi_get_cb_info(env, info, &argc, argv, NULL, NULL);
+  if (st != napi_ok) {
+    return NULL;
+  }
+
+  size_t str_len = 0;
+  napi_value result = NULL;
+  char* buf = NULL;
+  Database* db = NULL;
+  PLDBError* db_err = NULL;
+
+  st = napi_get_value_string_utf8(env, argv[0], NULL, 0, &str_len);
+  if (st != napi_ok) {
+    goto clean;
+  }
+
+  buf = malloc(str_len);
+
+  st = napi_get_value_string_utf8(env, argv[0], buf, str_len, &str_len);
+  if (st != napi_ok) {
+    goto clean;
+  }
+
+  db_err = PLDB_open(buf, &db);
+  if (db_err != NULL) {
+    napi_throw_error(env, NULL, db_err->message);
+    // TODO: throw error
+    goto clean;
+  }
+
+  st = napi_create_external(env, db, db_finalize, NULL, &result);
+  if (st != napi_ok) {
+    goto clean;
+  }
+
+clean:
+  if (buf != NULL) {
+    free(buf);
+    buf = NULL;
+  }
+  if (db_err != NULL) {
+    PLDB_free_error(db_err);
+  }
+  // Do something useful.
+  return result;
+}
+
+static napi_value
+polodb_handle_message(napi_env env, napi_callback_info info) {
+  return NULL;
+}
+
+#define DECLARE_NAPI_METHOD(name, func)                          \
+  { name, 0, func, 0, 0, 0, napi_default, 0 }
+
+static napi_property_descriptor polodb_properties[] = {
+  DECLARE_NAPI_METHOD("handleMessage", polodb_handle_message),
+};
+
+#define LENGTH_OF(ARR) (sizeof(ARR) / sizeof(ARR[0]))
+
 napi_value create_addon(napi_env env) {
   napi_value result;
   NAPI_CALL(env, napi_create_object(env, &result));
+
+  napi_value cls;
+  NAPI_CALL(env, napi_define_class(
+    env,
+    "PoloDB",
+    NAPI_AUTO_LENGTH,
+    polodb_ctor,
+    NULL,
+    LENGTH_OF(polodb_properties),
+    polodb_properties,
+    &cls
+  ));
+
+  NAPI_CALL(
+    env,
+    napi_set_named_property(
+      env,
+      result,
+      "PoloDB",
+      cls
+    )
+  );
 
   napi_value exported_function;
   NAPI_CALL(env, napi_create_function(env,
@@ -157,11 +245,6 @@ napi_value create_addon(napi_env env) {
                                       handle_message,
                                       NULL,
                                       &exported_function));
-
-  NAPI_CALL(env, napi_set_named_property(env,
-                                         result,
-                                         "doSomethingUseful",
-                                         exported_function));
 
   return result;
 }
