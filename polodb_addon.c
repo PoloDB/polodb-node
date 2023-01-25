@@ -1,5 +1,6 @@
 #include <node_api.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include "headers/polodb.h"
 
 #define NAPI_CALL(env, call)                                      \
@@ -29,8 +30,9 @@ static void db_finalize(napi_env env, void* finalize_data, void* finalize_hint) 
 static napi_value
 polodb_ctor(napi_env env, napi_callback_info info) {
   size_t argc = 1;
+  napi_value this_arg;
   napi_value argv[1];
-  napi_status st = napi_get_cb_info(env, info, &argc, argv, NULL, NULL);
+  napi_status st = napi_get_cb_info(env, info, &argc, argv, &this_arg, NULL);
   if (st != napi_ok) {
     return NULL;
   }
@@ -46,9 +48,10 @@ polodb_ctor(napi_env env, napi_callback_info info) {
     goto clean;
   }
 
-  buf = malloc(str_len);
+  buf = malloc(str_len + 1);
+  buf[str_len] = 0;
 
-  st = napi_get_value_string_utf8(env, argv[0], buf, str_len, &str_len);
+  st = napi_get_value_string_utf8(env, argv[0], buf, str_len + 1, NULL);
   if (st != napi_ok) {
     goto clean;
   }
@@ -65,6 +68,11 @@ polodb_ctor(napi_env env, napi_callback_info info) {
     goto clean;
   }
 
+  st = napi_set_named_property(env, this_arg, "__internal", result);
+  if (st != napi_ok) {
+    goto clean;
+  }
+
 clean:
   if (buf != NULL) {
     free(buf);
@@ -74,22 +82,28 @@ clean:
     PLDB_free_error(db_err);
   }
   // Do something useful.
-  return result;
+  return NULL;
 }
 
 static napi_value
 polodb_handle_message(napi_env env, napi_callback_info info) {
   size_t argc = 1;
   napi_value argv[1];
-  napi_value thisArg;
-  napi_status st = napi_get_cb_info(env, info, &argc, argv, &thisArg, NULL);
+  napi_value this_arg;
+  napi_value internal;
+  napi_status st = napi_get_cb_info(env, info, &argc, argv, &this_arg, NULL);
+  if (st != napi_ok) {
+    return NULL;
+  }
+
+  st = napi_get_named_property(env, this_arg, "__internal", &internal);
   if (st != napi_ok) {
     return NULL;
   }
 
   Database* db = NULL;
   PLDBError* db_err = NULL;
-  st = napi_get_value_external(env, thisArg, (void**)&db);
+  st = napi_get_value_external(env, internal, (void**)&db);
   if (st != napi_ok) {
     return NULL;
   }
@@ -164,14 +178,20 @@ static napi_value
 polodb_handle_message_async(napi_env env, napi_callback_info info) {
   size_t argc = 1;
   napi_value argv[1];
-  napi_value thisArg;
-  napi_status st = napi_get_cb_info(env, info, &argc, argv, &thisArg, NULL);
+  napi_value this_arg;
+  napi_value internal;
+  napi_status st = napi_get_cb_info(env, info, &argc, argv, &this_arg, NULL);
+  if (st != napi_ok) {
+    return NULL;
+  }
+
+  st = napi_get_named_property(env, this_arg, "__internal", &internal);
   if (st != napi_ok) {
     return NULL;
   }
 
   Database* db = NULL;
-  st = napi_get_value_external(env, thisArg, (void**)&db);
+  st = napi_get_value_external(env, internal, (void**)&db);
   if (st != napi_ok) {
     return NULL;
   }

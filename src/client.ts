@@ -7,6 +7,8 @@ import os from "os";
 import MsgTy from "./msgTy";
 import { encode } from "./encoding";
 
+const nativeAddon = require("../build/Release/polodb");
+
 const defaultConfig: Config = {
   executablePath:
     os.platform() === "win32"
