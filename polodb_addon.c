@@ -246,12 +246,26 @@ polodb_version(napi_env env, napi_callback_info info) {
   return result;
 }
 
+static napi_value
+polodb_connect(napi_env env, napi_callback_info info) {
+  return NULL;
+}
+
+static napi_value
+polodb_close(napi_env env, napi_callback_info info) {
+  // TODO:
+
+  return NULL;
+}
+
 #define DECLARE_NAPI_METHOD(name, func)                          \
   { name, 0, func, 0, 0, 0, napi_default, 0 }
 
 static napi_property_descriptor polodb_properties[] = {
+  DECLARE_NAPI_METHOD("connect", polodb_connect),
   DECLARE_NAPI_METHOD("handleMessageSync", polodb_handle_message),
   DECLARE_NAPI_METHOD("handleMessage", polodb_handle_message_async),
+  DECLARE_NAPI_METHOD("close", polodb_close),
 };
 
 #define LENGTH_OF(ARR) (sizeof(ARR) / sizeof(ARR[0]))

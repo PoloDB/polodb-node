@@ -9,12 +9,13 @@ describe('transaction', function() {
   let p;
   beforeAll(async function() {
     p = prepareTestPath('test-transaction.db');
-    client = await PoloDbClient.createConnection(p);
+    client = new PoloDbClient(p);
+    await client.connect();
   });
 
   afterAll(function() {
     if (client) {
-      client.dispose();
+      client.close();
     }
   });
 
@@ -67,12 +68,13 @@ describe('abandon uncommited changes', function() {
 
   beforeAll(async function() {
     dbPath = prepareTestPath('test-transaction.db');
-    db = await PoloDbClient.createConnection(dbPath);
+    db = new PoloDbClient(dbPath);
+    await db.connect();
   });
 
   afterAll(function() {
     if (db) {
-      db.dispose();
+      db.close();
     }
   });
 
@@ -97,9 +99,10 @@ describe('abandon uncommited changes', function() {
       });
     }
 
-    db.dispose();
+    db.close();
 
-    db = await PoloDbClient.createConnection(dbPath);
+    db = new PoloDbClient(dbPath);
+    await db.connect();
 
     collection = db.collection('test');
     expect(await collection.count()).toBe(10);

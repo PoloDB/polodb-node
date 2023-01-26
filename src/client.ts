@@ -29,6 +29,14 @@ class PoloDbClient extends EventEmitter {
     this.addonWrapper = new nativeAddon.PoloDB(dbPath);
   }
 
+  async connect() {
+    this.addonWrapper.connect();
+  }
+
+  close() {
+    this.addonWrapper.close();
+  }
+
   // public startTransaction(ty?: TransactionType): Promise<void> {
   //   if (typeof ty === "undefined") {
   //     ty = TransactionType.Auto;
