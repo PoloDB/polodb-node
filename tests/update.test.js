@@ -42,7 +42,7 @@ describe.only('Update', function () {
     //   await collection.insert(item);
     // }
     const promises = DATA_SET.map(item => {
-      return collection.insert(item);
+      return collection.insertOne(item);
     });
     await Promise.all(promises);
   });
