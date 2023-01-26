@@ -232,6 +232,20 @@ clean:
   return promise;
 }
 
+
+#define BUFFER_SIZE 512
+
+static napi_value
+polodb_version(napi_env env, napi_callback_info info) {
+  static char buffer[BUFFER_SIZE];
+  napi_value result = NULL;
+
+  unsigned int size = PLDB_version(buffer, BUFFER_SIZE);
+  napi_create_string_utf8(env, buffer, size, &result);
+
+  return result;
+}
+
 #define DECLARE_NAPI_METHOD(name, func)                          \
   { name, 0, func, 0, 0, 0, napi_default, 0 }
 
@@ -258,15 +272,28 @@ napi_value create_addon(napi_env env) {
     &cls
   ));
 
-  NAPI_CALL(
+  NAPI_CALL(env, napi_set_named_property(
     env,
-    napi_set_named_property(
-      env,
-      result,
-      "PoloDB",
-      cls
-    )
-  );
+    result,
+    "PoloDB",
+    cls
+  ));
+
+  napi_value exported_function;
+  NAPI_CALL(env, napi_create_function(env,
+    "version",
+    NAPI_AUTO_LENGTH,
+    polodb_version,
+    NULL,
+    &exported_function
+  ));
+
+  NAPI_CALL(env, napi_set_named_property(
+    env,
+    result,
+    "version",
+    exported_function
+  ));
 
   return result;
 }

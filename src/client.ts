@@ -9,40 +9,9 @@ const nativeAddon: any = require("../build/Release/polodb");
 class PoloDbClient extends EventEmitter {
   private addonWrapper: any;
 
-  // public static version(config?: Partial<Config>): Promise<string> {
-  //   const mergedConfig = {
-  //     ...defaultConfig,
-  //     ...config,
-  //   };
-
-  //   const params: string[] = ["--version"];
-
-  //   return new Promise((resolve, reject) => {
-  //     const process = child_process.spawn(mergedConfig.executablePath, params, {
-  //       stdio: ["pipe"],
-  //     });
-
-  //     let stdOutBuffer = Buffer.alloc(0);
-
-  //     process.stdout.on("data", (chunk: Buffer) => {
-  //       const newBuffer = Buffer.alloc(stdOutBuffer.length + chunk.length);
-  //       stdOutBuffer.copy(newBuffer, 0);
-  //       chunk.copy(newBuffer, stdOutBuffer.length);
-  //       stdOutBuffer = newBuffer;
-  //     });
-
-  //     process.on("error", (err: Error) => {
-  //       reject(err);
-  //     });
-
-  //     process.stdout.on("close", () => {
-  //       const decoder = new TextDecoder();
-  //       let content = decoder.decode(stdOutBuffer);
-  //       content = content.replace("\n", "");
-  //       resolve(content);
-  //     });
-  //   });
-  // }
+  public static version(): string {
+    return nativeAddon.version();
+  }
 
   // public static async createConnection(
   //   dbPath: string,
