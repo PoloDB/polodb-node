@@ -279,18 +279,22 @@ class SharedState {
 
       const handleWrite = this.generateHandleWrite(reqId);
 
-      this.socket.write(REQUEST_HEAD, handleWrite);
-
-      this.writeUint32(reqId, handleWrite);
-
-      if (body) {
-        const reqBody = {
-          body
-        };
-        this.writeBody(encode(reqBody), handleWrite);
-      } else {
-        this.writeUint32(0);
+      const headerBuffer = new ArrayBuffer(12);
+      const view = new DataView(headerBuffer);
+      for (let i = 0; i < REQUEST_HEAD.length; i++) {
+        view.setUint8(i, REQUEST_HEAD[i]);
       }
+
+      const reqBody = {
+        body
+      };
+
+      view.setUint32(4, reqId);
+      const bodyBuffer = encode(reqBody);
+      view.setUint32(8, bodyBuffer.byteLength);
+
+      this.socket.write(new Uint8Array(headerBuffer), handleWrite);
+      this.socket.write(bodyBuffer, handleWrite);
     });
   }
 

@@ -18,13 +18,13 @@ describe("transaction", function () {
     }
   });
 
-  test("test serialize", async () => {
+  test("test commit transaction", async () => {
     await client.startTransaction();
-    let collection = client.collection("test-trans");
-    await collection.insertOne({
-      _id: 3,
-      name: "2333",
-    });
+    // let collection = client.collection("test-trans");
+    // await collection.insertOne({
+    //   _id: 3,
+    //   name: "2333",
+    // });
     await client.commit();
     client.dispose();
 

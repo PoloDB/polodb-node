@@ -1,5 +1,14 @@
 import SharedState from "./sharedState";
 import { Commands } from "./commands";
+import type { Document } from "bson";
+
+export interface InsertOneResult {
+  insertedId: any;
+}
+
+export interface InsertManyResult {
+  insertedIds: Document;
+}
 
 class Collection {
   private __state: SharedState;
@@ -28,15 +37,18 @@ class Collection {
     });
   }
 
-  insertOne(document: Document): Promise<any> {
-    return this.__state.sendRequest({
+  async insertOne(document: Document): Promise<InsertOneResult> {
+    const result: InsertManyResult = await this.__state.sendRequest({
       command: Commands.Insert,
       ns: this.__name,
       documents: [document],
     });
+    return {
+      insertedId: result.insertedIds["0"]
+    };
   }
 
-  insertMany(documents: Document[]): Promise<any> {
+  insertMany(documents: Document[]): Promise<InsertManyResult> {
     return this.__state.sendRequest({
       command: Commands.Insert,
       ns: this.__name,

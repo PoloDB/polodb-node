@@ -1,5 +1,6 @@
 const { PoloDbClient } = require("../dist");
 const { prepareTestPath } = require("./testUtils");
+const { ObjectId } = require("bson");
 
 describe("version", function () {
   test("test version", async () => {
@@ -30,8 +31,8 @@ describe("Database", function () {
       name: "Vincent Chan",
       gentle: "man",
     });
-    console.log("result:", result);
-    // expect(oid).toBeInstanceOf(ObjectId);
+    const { insertedId } = result;
+    expect(insertedId).toBeInstanceOf(ObjectId);
     expect(await collection.countDocuments()).toBe(1);
     const data = await collection.findAll();
     console.log(data);

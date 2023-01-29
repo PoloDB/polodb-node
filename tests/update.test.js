@@ -142,7 +142,7 @@ describe.only('Update', function () {
       _id: 1,
     });
     expect(result[0].num).toBe(1);
-    await collection.update({
+    await collection.updateMany({
       _id: 1,
     }, {
       $max: {
