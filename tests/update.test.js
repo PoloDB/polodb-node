@@ -25,12 +25,13 @@ describe.only('Update', function () {
   beforeAll(async function() {
     generateData();
     dbPath = prepareTestPath('test-update.db');
-    db = await PoloDbClient.createConnection(dbPath);
+    db = new PoloDbClient(dbPath);
+    await db.connect();
   });
 
   afterAll(function() {
     if (db) {
-      db.dispose();
+      db.close();
     }
   });
 
@@ -41,7 +42,7 @@ describe.only('Update', function () {
     //   await collection.insert(item);
     // }
     const promises = DATA_SET.map(item => {
-      return collection.insert(item);
+      return collection.insertOne(item);
     });
     await Promise.all(promises);
   });

@@ -4,7 +4,7 @@ const { prepareTestPath } = require('./testUtils');
 describe('version', function () {
 
   test('test version', async () => {
-    const version = await PoloDbClient.version();
+    const version = PoloDbClient.version();
     expect(version).toBe('PoloDB 2.0.0');
   });
 
@@ -17,12 +17,13 @@ describe('Database', function () {
   let client;
   beforeAll(async function() {
     const p = prepareTestPath('test.db');
-    client = await PoloDbClient.createConnection(p);
+    client = new PoloDbClient(p);
+    await client.connect();
   });
 
   afterAll(function() {
     if (client) {
-      client.dispose();
+      client.close();
     }
   });
 
@@ -138,12 +139,13 @@ describe('logic $or and $and', function() {
   let client;
   beforeAll(async function() {
     const p = prepareTestPath('test-update.db');
-    client = await PoloDbClient.createConnection(p);
+    client = new PoloDbClient(p);
+    await client.connect();
   });
 
   afterAll(function() {
     if (client) {
-      client.dispose();
+      client.close();
     }
   });
   const suite = [
