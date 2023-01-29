@@ -1,59 +1,60 @@
-const { PoloDbClient, ObjectId } = require('../dist');
-const { prepareTestPath } = require('./testUtils');
+const { PoloDbClient } = require("../dist");
+const { prepareTestPath } = require("./testUtils");
 
-describe('version', function () {
-
-  test('test version', async () => {
+describe("version", function () {
+  test("test version", async () => {
     const version = await PoloDbClient.version();
-    expect(version).toBe('PoloDB 2.0.0');
+    expect(version).toBe("PoloDB 3.3.2");
   });
-
 });
 
-describe('Database', function () {
+describe("Database", function () {
   /**
    * @type {PoloDbClient}
    */
   let client;
-  beforeAll(async function() {
-    const p = prepareTestPath('test.db');
+  beforeAll(async function () {
+    const p = prepareTestPath("test.db");
     client = await PoloDbClient.createConnection(p);
   });
 
-  afterAll(function() {
+  afterAll(function () {
     if (client) {
       client.dispose();
     }
   });
 
-  test('test serialize', async () => {
-    const collection = client.collection('test1');
-    const oid = await collection.insert({
-      name: 'Vincent Chan',
-      gentle: 'man',
+  test("test serialize", async () => {
+    const collection = client.collection("test1");
+    const result = await collection.insertOne({
+      name: "Vincent Chan",
+      gentle: "man",
     });
-    expect(oid).toBeInstanceOf(ObjectId);
-    expect(await collection.count()).toBe(1);
-    const data = await collection.find();
+    console.log("result:", result);
+    // expect(oid).toBeInstanceOf(ObjectId);
+    expect(await collection.countDocuments()).toBe(1);
+    const data = await collection.findAll();
     console.log(data);
   });
 
   const TEST_COUNT = 1000;
-  test('insert 1000 elements', async () => {
-    const collection = client.collection('test2');
+  test("insert 1000 elements", async () => {
+    const collection = client.collection("test2");
+    const documents = [];
     for (let i = 0; i < TEST_COUNT; i++) {
-      await collection.insert({
+      documents.push({
         _id: i,
         hello: i.toString(),
       });
     }
-    expect(await collection.count()).toBe(TEST_COUNT);
+    await collection.insertMany(documents);
+    expect(await collection.countDocuments()).toBe(TEST_COUNT);
   });
 
-  test('find 1000 elements', async () => {
-    const collection = client.collection('test2');
+  test("find 1000 elements", async () => {
+    const collection = client.collection("test2");
     for (let i = 0; i < TEST_COUNT; i++) {
-      const result = await collection.find({
+      const result = await collection.findAll({
         _id: i,
       });
       expect(result.length).toBe(1);
@@ -62,39 +63,39 @@ describe('Database', function () {
     }
   });
 
-  test('findOne 1000 elements', async () => {
-    const collection = client.collection('test2');
+  test("findOne 1000 elements", async () => {
+    const collection = client.collection("test2");
     for (let i = 0; i < TEST_COUNT; i++) {
       const result = await collection.findOne({
         _id: i,
       });
-      expect(typeof result).toBe('object');
+      expect(typeof result).toBe("object");
     }
   });
 
-  test('delete 1000 elements', async () => {
-    const collection = client.collection('test2');
+  test("delete 1000 elements", async () => {
+    const collection = client.collection("test2");
     for (let i = 0; i < TEST_COUNT; i++) {
-      await collection.delete({
+      await collection.deleteOne({
         _id: i,
       });
-      const result = await collection.find({
+      const result = await collection.findAll({
         _id: i,
       });
       expect(result.length).toBe(0);
     }
   });
 
-  test('array', async () => {
-    const collection = client.collection('test3');
+  test("array", async () => {
+    const collection = client.collection("test3");
     const arr = [];
     for (let i = 0; i < 1000; i++) {
       arr.push(i);
     }
-    await collection.insert({
+    await collection.insertOne({
       data: arr,
     });
-    const result = await collection.find();
+    const result = await collection.findAll();
     expect(result.length).toBe(1);
     const first = result[0];
     expect(Array.isArray(first.data)).toBe(true);
@@ -103,75 +104,67 @@ describe('Database', function () {
     }
   });
 
-  test('datetime', async () => {
-    const colDateTime = client.collection('test4');
+  test("datetime", async () => {
+    const colDateTime = client.collection("test4");
     const now = new Date();
-    await colDateTime.insert({
+    await colDateTime.insertOne({
       created: now,
     });
-    const result = await colDateTime.find();
+    const result = await colDateTime.findOne();
     expect(result.length).toBe(1);
     const first = result[0];
     expect(first.created.getTime()).toBe(now.getTime());
   });
 
-  test('drop collection', async () => {
-    await client.dropCollection('test3');
-    let thrown = false;
-    try {
-      const collection = client.collection('test3');
-      await collection.find({
-        _id: 2
-      });
-    } catch (err) {
-      thrown = true;
-    }
-
+  test("drop collection", async () => {
+    await client.collection("test3").drop();
+    const collection = client.collection("test3");
+    const result = await collection.findAll({
+      _id: 2,
+    });
+    expect(result.length).toBe(0);
   });
-
 });
 
-describe('logic $or and $and', function() {
+describe("logic $or and $and", function () {
   /**
    * @type {PoloDbClient}
    */
   let client;
-  beforeAll(async function() {
-    const p = prepareTestPath('test-update.db');
+  beforeAll(async function () {
+    const p = prepareTestPath("test-update.db");
     client = await PoloDbClient.createConnection(p);
   });
 
-  afterAll(function() {
+  afterAll(function () {
     if (client) {
       client.dispose();
     }
   });
   const suite = [
     {
-      name: 'test1',
+      name: "test1",
       age: 10,
     },
     {
-      name: 'test2',
+      name: "test2",
       age: 11,
     },
     {
-      name: 'test3',
+      name: "test3",
       age: 12,
     },
     {
-      name: 'test3',
+      name: "test3",
       age: 14,
-    }
-  ]
+    },
+  ];
 
-  test('test $or', async () => {
-    const collection = client.collection('test');
-    for (const item of suite) {
-      await collection.insert(item);
-    }
+  test("test $or", async () => {
+    const collection = client.collection("test");
+    await collection.insertMany(suite);
 
-    const twoItems = await collection.find({
+    const twoItems = await collection.findAll({
       $or: [
         {
           age: 11,
@@ -179,28 +172,27 @@ describe('logic $or and $and', function() {
         {
           age: 12,
         },
-      ]
+      ],
     });
 
     expect(twoItems.length).toBe(2);
   });
 
-  test('test $and', async () => {
-    const collection = client.collection('test');
-    const items = await collection.find({
+  test("test $and", async () => {
+    const collection = client.collection("test");
+    const items = await collection.findAll({
       $and: [
         {
-          name: 'test2',
+          name: "test2",
         },
         {
           age: 11,
         },
-      ]
+      ],
     });
 
     expect(items.length).toBe(1);
-    expect(items[0].name).toBe('test2');
+    expect(items[0].name).toBe("test2");
     expect(items[0].age).toBe(11);
-  })
-
+  });
 });

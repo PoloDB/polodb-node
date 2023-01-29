@@ -1,71 +1,100 @@
-import { encode } from './encoding';
-import MsgTy from './msgTy';
-import SharedState from './sharedState';
+import SharedState from "./sharedState";
+import { Commands } from "./commands";
 
 class Collection {
-
   private __state: SharedState;
-  private __name :string;
+  private __name: string;
 
-  public constructor(state: SharedState, name: string) {
+  constructor(state: SharedState, name: string) {
     this.__state = state;
     this.__name = name;
   }
 
-  public find(query?: any): Promise<any[]> {
-    const requestObj = {
-      cl: this.__name,
-      query,
-    };
-    const pack = encode(requestObj);
-    return this.__state.sendRequest(MsgTy.Find, pack);
+  findAll(filter?: any): Promise<any[]> {
+    return this.__state.sendRequest({
+      command: Commands.Find,
+      ns: this.__name,
+      multi: true,
+      filter,
+    });
   }
 
-  public findOne(query: any): Promise<any> {
-    const requestObj = {
-      cl: this.__name,
-      query,
-    };
-    const pack = encode(requestObj);
-    return this.__state.sendRequest(MsgTy.FindOne, pack);
+  findOne(filter?: any): Promise<any> {
+    return this.__state.sendRequest({
+      command: Commands.Find,
+      ns: this.__name,
+      multi: true,
+      filter,
+    });
   }
 
-  public insert(data: any): Promise<any> {
-    const requestObj = {
-      cl: this.__name,
-      data,
-    };
-    const pack = encode(requestObj);
-    return this.__state.sendRequest(MsgTy.Insert, pack);
+  insertOne(document: Document): Promise<any> {
+    return this.__state.sendRequest({
+      command: Commands.Insert,
+      ns: this.__name,
+      documents: [document],
+    });
   }
 
-  public update(query: any, update: any): Promise<number> {
-    const request = {
-      cl: this.__name,
-      query,
-      update
-    };
-    const pack = encode(request);
-    return this.__state.sendRequest(MsgTy.Update, pack);
+  insertMany(documents: Document[]): Promise<any> {
+    return this.__state.sendRequest({
+      command: Commands.Insert,
+      ns: this.__name,
+      documents,
+    });
   }
 
-  public delete(query: any): Promise<any> {
-    const requestObj = {
-      cl: this.__name,
-      query,
-    };
-    const pack = encode(requestObj);
-    return this.__state.sendRequest(MsgTy.Delete, pack);
+  updateOne(filter: Document, update: Document): Promise<any> {
+    return this.__state.sendRequest({
+      command: Commands.Update,
+      ns: this.__name,
+      filter,
+      update,
+      multi: false,
+    });
   }
 
-  public count(): Promise<number> {
-    const requestObj = {
-      cl: this.__name,
-    };
-    const pack = encode(requestObj);
-    return this.__state.sendRequest(MsgTy.Count, pack);
+  updateMany(filter: Document, update: Document): Promise<any> {
+    return this.__state.sendRequest({
+      command: Commands.Update,
+      ns: this.__name,
+      filter,
+      update,
+      multi: true,
+    });
   }
 
+  deleteOne(filter: Document): Promise<any> {
+    return this.__state.sendRequest({
+      command: Commands.Delete,
+      ns: this.__name,
+      filter,
+      multi: false,
+    });
+  }
+
+  deleteMany(filter: Document): Promise<any> {
+    return this.__state.sendRequest({
+      command: Commands.Delete,
+      ns: this.__name,
+      filter,
+      multi: true,
+    });
+  }
+
+  countDocuments(): Promise<number> {
+    return this.__state.sendRequest({
+      command: Commands.CountDocuments,
+      ns: this.__name,
+    });
+  }
+
+  drop(): Promise<void> {
+    return this.__state.sendRequest({
+      command: Commands.DropCollection,
+      ns: this.__name,
+    });
+  }
 }
 
 export default Collection;

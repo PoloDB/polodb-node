@@ -40,15 +40,12 @@ describe.only('Update', function () {
     // for (const item of DATA_SET) {
     //   await collection.insert(item);
     // }
-    const promises = DATA_SET.map(item => {
-      return collection.insert(item);
-    });
-    await Promise.all(promises);
+    await collection.insertMany(DATA_SET);
   });
 
   test('update $gte $set', async () => {
     const collection = db.collection('test');
-    await collection.update({
+    await collection.updateMany({
       _id: {
         $gte: 500
       },
@@ -58,7 +55,7 @@ describe.only('Update', function () {
       }
     });
 
-    const result = await collection.find({
+    const result = await collection.findAll({
       content: "updated!",
     });
     expect(result.length).toBe(500);
@@ -69,7 +66,7 @@ describe.only('Update', function () {
     const collection = db.collection('test');
     let thrown = false;
     try {
-      await collection.update({
+      await collection.updateMany({
         _id: 0
       }, {
         $inc: {
@@ -84,14 +81,14 @@ describe.only('Update', function () {
 
   test('update $inc', async () => {
     const collection = db.collection('test');
-    await collection.update({
+    await collection.updateMany({
       _id: 0
     }, {
       $inc: {
         num: 100
       },
     });
-    const result = await collection.find({
+    const result = await collection.findAll({
       _id: 0,
     });
     expect(result.length).toBe(1);
@@ -100,14 +97,14 @@ describe.only('Update', function () {
 
   test('update $rename', async () => {
     const collection = db.collection('test');
-    await collection.update({
+    await collection.updateMany({
       _id: 0
     }, {
       $rename: {
         num: 'num2'
       },
     });
-    const result = await collection.find({
+    const result = await collection.findAll({
       _id: 0,
     });
     expect(result.length).toBe(1);
@@ -118,14 +115,14 @@ describe.only('Update', function () {
 
   test('update $unset', async () => {
     const collection = db.collection('test');
-    await collection.update({
+    await collection.updateMany({
       _id: 0
     }, {
       $unset: {
         num2: ''
       },
     });
-    const result = await collection.find({
+    const result = await collection.findAll({
       _id: 0,
     });
     expect(result[0]._id).toBe(0);
@@ -134,14 +131,14 @@ describe.only('Update', function () {
 
   test('update $max', async () => {
     const collection = db.collection('test');
-    await collection.update({
+    await collection.updateMany({
       _id: 1,
     }, {
       $max: {
         num: 0 
       },
     });
-    let result = await collection.find({
+    let result = await collection.findAll({
       _id: 1,
     });
     expect(result[0].num).toBe(1);
@@ -152,7 +149,7 @@ describe.only('Update', function () {
         num: 2,
       },
     });
-    result = await collection.find({
+    result = await collection.findAll({
       _id: 1,
     });
     expect(result[0].num).toBe(2);
@@ -160,11 +157,11 @@ describe.only('Update', function () {
 
   test('update $push', async () => {
     const collection = db.collection('test-push');
-    await collection.insert({
+    await collection.insertOne({
       _id: 0,
       content: [ 1, 2, 3 ],
     });
-    await collection.update({
+    await collection.updateMany({
       _id: 0,
     }, {
       $push: {
@@ -177,11 +174,11 @@ describe.only('Update', function () {
 
   test.skip('update $pop', async () => {
     const collection = db.collection('test-pop');
-    await collection.insert({
+    await collection.insertOne({
       _id: 0,
       content: [ 1, 2, 3 ],
     });
-    await collection.update({
+    await collection.updateMany({
       _id: 0,
     }, {
       $pop: {
@@ -190,7 +187,7 @@ describe.only('Update', function () {
     });
     let item = await collection.findOne({ _id: 0 });
     expect(item.content).to.deep.equal([ 1, 2 ]);
-    await collection.update({
+    await collection.updateMany({
       _id: 0,
     }, {
       $pop: {

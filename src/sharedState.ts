@@ -1,9 +1,9 @@
 import net, { Socket } from 'net';
 import child_process from 'child_process';
-import { decode } from './encoding';
+import { decode, encode } from './encoding';
 import { REQUEST_HEAD, PING_HEAD } from './common';
+import { type Document } from "bson";
 import os from 'os';
-import MsgTy from './msgTy';
 
 const sleep = (time) => new Promise((resolve) => setTimeout(resolve, time));
 
@@ -18,7 +18,7 @@ export interface RequestItem {
   reject: (err: Error) => void,
 }
 
-const HEADER_SIZE = 16;
+const HEADER_SIZE = 12;
 
 class SharedState {
 
@@ -149,13 +149,7 @@ class SharedState {
       return;
     }
 
-    const msgTy = buf.readInt32BE(8);
-    if (msgTy < 0) {  // error
-      this.tryParseErrorMessage(requestContext);
-      return;
-    }
-
-    const bodySize = buf.readUInt32BE(12);
+    const bodySize = buf.readUInt32BE(8);
     if (bodySize === 0) {
       requestContext.resolve(undefined);
       this.__buffer = buf.subarray(HEADER_SIZE);
@@ -169,32 +163,18 @@ class SharedState {
 
     const body = buf.subarray(HEADER_SIZE, endSize);
     try {
-      const obj = decode(body);
-      requestContext.resolve(obj);
+      const doc = decode(body);
+      if (doc.error) {
+        requestContext.reject(doc.error);
+      } else {
+        requestContext.resolve(doc.body);
+      }
       this.__buffer = buf.subarray(endSize);
     } catch (err) {
       requestContext.reject(err);
       this.socket.destroy();
       this.socket = null;
     }
-    this.tryParseBuffer();
-  }
-
-  private tryParseErrorMessage(ctx: RequestItem) {
-    const buf = this.__buffer;
-
-    const errorMsgSize = buf.readUInt32BE(12);
-
-    const endSize = HEADER_SIZE + errorMsgSize;
-    if (buf.length < endSize) {  // body not enough
-      return;
-    }
-
-    const errorMsgBuffer = buf.subarray(HEADER_SIZE, HEADER_SIZE + errorMsgSize);
-    const textDecoder = new TextDecoder();
-    const errString = textDecoder.decode(errorMsgBuffer);
-    ctx.reject(new Error(errString));
-    this.__buffer = buf.subarray(endSize);
     this.tryParseBuffer();
   }
 
@@ -288,7 +268,7 @@ class SharedState {
     };
   }
 
-  public sendRequest(msgTy: MsgTy, body?: Uint8Array): Promise<any> {
+  public sendRequest(body: Document): Promise<any> {
     return new Promise((resolve, reject) => {
       const reqId = this.reqidCounter++;
       this.promiseMap.set(reqId, {
@@ -302,10 +282,12 @@ class SharedState {
       this.socket.write(REQUEST_HEAD, handleWrite);
 
       this.writeUint32(reqId, handleWrite);
-      this.writeInt32(msgTy, handleWrite);
 
       if (body) {
-        this.writeBody(body, handleWrite);
+        const reqBody = {
+          body
+        };
+        this.writeBody(encode(reqBody), handleWrite);
       } else {
         this.writeUint32(0);
       }
