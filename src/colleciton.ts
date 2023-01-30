@@ -28,13 +28,14 @@ class Collection {
     });
   }
 
-  findOne(filter?: any): Promise<any> {
-    return this.__state.sendRequest({
+  async findOne(filter?: any): Promise<any> {
+    const arr = await this.__state.sendRequest({
       command: Commands.Find,
       ns: this.__name,
       multi: true,
       filter,
     });
+    return arr[0];
   }
 
   async insertOne(document: Document): Promise<InsertOneResult> {

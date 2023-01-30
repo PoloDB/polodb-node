@@ -20,11 +20,11 @@ describe("transaction", function () {
 
   test("test commit transaction", async () => {
     await client.startTransaction();
-    // let collection = client.collection("test-trans");
-    // await collection.insertOne({
-    //   _id: 3,
-    //   name: "2333",
-    // });
+    let collection = client.collection("test-trans");
+    await collection.insertOne({
+      _id: 3,
+      name: "2333",
+    });
     await client.commit();
     client.dispose();
 
@@ -88,14 +88,10 @@ describe("abandon uncommited changes", function () {
         _id: i,
         hello: "world",
       })
-      await collection.insertOne({
-        _id: i,
-        hello: "world",
-      });
     }
     await collection.insertMany(documents);
 
-    expect(await collection.countDocument()).toBe(10);
+    expect(await collection.countDocuments()).toBe(10);
 
     await db.startTransaction();
 

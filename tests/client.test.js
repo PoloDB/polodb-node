@@ -1,11 +1,12 @@
 const { PoloDbClient } = require("../dist");
 const { prepareTestPath } = require("./testUtils");
 const { ObjectId } = require("bson");
+const { performance } = require("perf_hooks");
 
 describe("version", function () {
   test("test version", async () => {
     const version = await PoloDbClient.version();
-    expect(version).toBe("PoloDB 3.3.2");
+    expect(version).toBe("PoloDB 3.3.3");
   });
 });
 
@@ -48,7 +49,9 @@ describe("Database", function () {
         hello: i.toString(),
       });
     }
+    const before = performance.now();
     await collection.insertMany(documents);
+    console.log("cost:", performance.now() - before);
     expect(await collection.countDocuments()).toBe(TEST_COUNT);
   });
 
@@ -111,7 +114,7 @@ describe("Database", function () {
     await colDateTime.insertOne({
       created: now,
     });
-    const result = await colDateTime.findOne();
+    const result = await colDateTime.findAll();
     expect(result.length).toBe(1);
     const first = result[0];
     expect(first.created.getTime()).toBe(now.getTime());
